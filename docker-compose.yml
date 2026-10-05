@@ -1,0 +1,95 @@
+# CloudAegis — complete local environment.
+#
+#   cp .env.example .env      # optional: defaults below work for local use
+#   docker compose up --build
+#
+# Web UI: http://localhost:8080   API docs: http://localhost:8080/api/docs
+# Demo mode seeds a clearly-labelled simulated AWS account; no AWS access needed.
+
+name: cloudaegis
+
+x-backend-env: &backend-env
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+  DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-cloudaegis}:${POSTGRES_PASSWORD:-cloudaegis}@postgres:5432/${POSTGRES_DB:-cloudaegis}
+  REDIS_URL: redis://redis:6379/0
+  SECRET_KEY: ${SECRET_KEY:-change-me-local-only-0123456789abcdef0123456789}
+  CREDENTIAL_ENCRYPTION_KEY: ${CREDENTIAL_ENCRYPTION_KEY:-}
+  SCAN_EXECUTOR: rq
+  DEMO_MODE: ${DEMO_MODE:-true}
+  SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@cloudaegis.local}
+  SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+  COOKIE_SECURE: ${COOKIE_SECURE:-false}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+  LOG_JSON: ${LOG_JSON:-true}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  PLATFORM_AWS_PRINCIPAL_ARN: ${PLATFORM_AWS_PRINCIPAL_ARN:-}
+  # Credentials for CloudAegis' *own* identity, used only to call sts:AssumeRole
+  # into audited accounts. Prefer an instance/task role in real deployments.
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+  AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
+  AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cloudaegis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cloudaegis}
+      POSTGRES_DB: ${POSTGRES_DB:-cloudaegis}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    image: cloudaegis/backend:local
+    restart: unless-stopped
+    command: ["api"]
+    environment: *backend-env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  worker:
+    image: cloudaegis/backend:local
+    restart: unless-stopped
+    command: ["worker"]
+    environment: *backend-env
+    depends_on:
+      backend: { condition: service_healthy }
+    healthcheck:
+      disable: true
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    image: cloudaegis/frontend:local
+    restart: unless-stopped
+    depends_on:
+      backend: { condition: service_healthy }
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres-data:

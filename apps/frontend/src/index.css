@@ -1,0 +1,89 @@
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background: theme("colors.canvas");
+    color: theme("colors.ink");
+    font-family: theme("fontFamily.sans");
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "tnum" 1, "ss01" 1;
+  }
+  body {
+    min-height: 100vh;
+  }
+  :focus-visible {
+    outline: 2px solid theme("colors.accent.DEFAULT");
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+  ::selection {
+    background: theme("colors.accent.dim");
+  }
+  * {
+    scrollbar-color: theme("colors.line-strong") transparent;
+    scrollbar-width: thin;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-panel border border-line bg-surface;
+  }
+  .panel-header {
+    @apply flex min-h-[40px] items-center justify-between gap-3 border-b border-line px-4 py-2;
+  }
+  .panel-title {
+    @apply font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-muted;
+  }
+  .eyebrow {
+    @apply font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-faint;
+  }
+  .field-label {
+    @apply mb-1.5 block text-[12.5px] font-medium text-muted;
+  }
+  .input {
+    @apply h-9 w-full rounded-control border border-line bg-canvas px-3 text-[13px] text-ink placeholder:text-faint
+      transition-colors hover:border-line-strong focus:border-accent focus:outline-none disabled:opacity-50;
+  }
+  .data-table {
+    @apply w-full border-collapse text-left text-[13px];
+  }
+  .data-table th {
+    @apply sticky top-0 z-[1] whitespace-nowrap border-b border-line bg-[#111113] px-4 py-2 font-mono text-[10.5px] font-medium uppercase tracking-[0.08em] text-faint;
+  }
+  .data-table td {
+    @apply border-b border-line/80 px-4 py-2 align-middle;
+  }
+  .data-table tbody tr {
+    @apply transition-colors hover:bg-[#18181B];
+  }
+  .data-table tbody tr:hover td:first-child {
+    box-shadow: inset 2px 0 0 theme("colors.accent.DEFAULT");
+  }
+  .mono {
+    @apply font-mono text-[12px];
+  }
+  .link {
+    @apply text-accent hover:text-accent-strong hover:underline underline-offset-2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
